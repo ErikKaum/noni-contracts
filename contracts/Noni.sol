@@ -20,11 +20,19 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
     
     string baseSVG = "<svg xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='xMinYMin meet' viewBox='0 0 350 350'><style>.base { fill: black; font-family: serif; font-size: 24px; }</style><rect width='100%' height='100%' fill='#F1F9F5' /><text x='50%' y='50%' class='base' dominant-baseline='middle' text-anchor='middle'>";
     
+    struct Bid {
+        uint256 bid;
+        address bidder;
+        bytes32 pubkey;
+    }
+
     struct NoniInfo {
         string name;
         string imageURI;        
         uint elo;
         string contentID;
+        bool forSale;
+        mapping(uint256 => Bid[]) bid;
     }
 
     // Get info of specific Noni at index
@@ -43,12 +51,20 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
 
         string memory finalSvg = string(abi.encodePacked(baseSVG, tokenId.toString(), "</text></svg>"));
 
-        noniInfos[tokenId] = NoniInfo({
-            name: string(abi.encodePacked("0xNoni", tokenId.toString())),
-            imageURI: Base64.encode(abi.encodePacked(finalSvg)),
-            elo: 400,
-            contentID: cid
-            });
+        // noniInfos[tokenId] = NoniInfo({
+        //     name: string(abi.encodePacked("0xNoni", tokenId.toString())),
+        //     imageURI: Base64.encode(abi.encodePacked(finalSvg)),
+        //     elo: 400,
+        //     contentID: cid,
+        //     forSale: false
+        //     });
+        
+        NoniInfo storage noni = noniInfos[tokenId];
+        noni.name = string(abi.encodePacked("0xNoni", tokenId.toString())); 
+        noni.imageURI = Base64.encode(abi.encodePacked(finalSvg));
+        noni.elo = 400;
+        noni.contentID = cid;
+        noni.forSale = false;
 
         _safeMint(msg.sender, tokenId);
 
@@ -57,12 +73,15 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
 
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         
-        NoniInfo memory info = noniInfos[tokenId];
+        // NoniInfo memory info = noniInfos[tokenId];
 
-        string memory name = info.name;
-        string memory imageURI = info.imageURI;
-        uint256 elo = info.elo;
-        string memory contentID = info.contentID;
+        string memory name = noniInfos[tokenId].name;
+        string memory imageURI = noniInfos[tokenId].imageURI;
+        uint256 elo = noniInfos[tokenId].elo;
+        string memory contentID = noniInfos[tokenId].contentID;
+
+        bool forSale = noniInfos[tokenId].forSale;
+        uint256 forSaleAsInt = boolToUInt256(forSale);
 
         bytes memory dataURI = abi.encodePacked(
             '{',
@@ -70,6 +89,7 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
                 '"imageURI": "data:image/svg+xml;base64,', imageURI,'",',
                 '"elo": "', elo.toString() ,'",',
                 '"contentID": "',contentID,'",',
+                '"forSale": "',forSaleAsInt.toString(),'",',
                 '"description": "Train your AI and battle against others!','",',
                 '"attributes": [{ "trait_type": "elo", "value": ',elo.toString(),' } ]'
             '}'
@@ -92,11 +112,38 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
 
     }
 
+    // Set the forSale property of a noni to either true or false
+    function setSaleState(uint256 tokenId, bool state) public {
+        require(ownerOf(tokenId) == msg.sender);
+
+        noniInfos[tokenId].forSale = state;
+
+        if (state == false) {
+            delete noniInfos[tokenId].bid[tokenId];
+        }
+    }
+
     function updateElo(uint256 tokenId, uint256 newElo) public {
         require(ownerOf(tokenId) == msg.sender);
  
         noniInfos[tokenId].elo = newElo;
+    }
 
+    function placeBid(uint256 tokenId, uint256 amount, bytes32 pubKey) public {
+        noniInfos[tokenId].bid[tokenId].push(Bid(amount, msg.sender, pubKey));     
+    }
+
+    function getBids(uint256 tokenId) public view returns(Bid[] memory) {
+        return noniInfos[tokenId].bid[tokenId];
+    }
+
+    function transfer(address _from, address _to, uint256 tokenId, string memory newContentID) external {
+        // Delete all bids so that they are not there for the next owner
+        delete noniInfos[tokenId].bid[tokenId];
+        noniInfos[tokenId].forSale = false;
+
+        updateCID(tokenId, newContentID);
+        safeTransferFrom(_from, _to, tokenId);
     }
 
     function getNumberOfNonis() public view returns(uint256) {
@@ -115,6 +162,10 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
 
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool) {
         return super.supportsInterface(interfaceId);
+    }
+
+    function boolToUInt256(bool x) internal pure returns (uint256 r) {
+        assembly { r := x }
     }
 
 
