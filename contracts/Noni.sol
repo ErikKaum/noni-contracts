@@ -30,7 +30,11 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
         string name;
         string imageURI;        
         uint elo;
-        string contentID;
+        // The current design is that the model.json is one file and the weights.bin is
+        // another... this might not be the most optimal but will work for now 
+        string modelID;
+        string weightsID;
+        // 
         bool forSale;
         mapping(uint256 => Bid[]) bid;
     }
@@ -45,7 +49,7 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
     }
 
     //default contendID QmNQ1ABiGJ9fv9wzxf1k1eKbc8nvXBQw7VnQSNedeRwwfo
-    function safeMint(string memory cid) public {
+    function safeMint(string memory modelCID, string memory weightsCID) public {
         uint256 tokenId = _tokenIdCounter.current();
         _tokenIdCounter.increment();
 
@@ -63,7 +67,8 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
         noni.name = string(abi.encodePacked("0xNoni", tokenId.toString())); 
         noni.imageURI = Base64.encode(abi.encodePacked(finalSvg));
         noni.elo = 400;
-        noni.contentID = cid;
+        noni.modelID = modelCID;
+        noni.weightsID = weightsCID;
         noni.forSale = false;
 
         _safeMint(msg.sender, tokenId);
@@ -78,7 +83,8 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
         string memory name = noniInfos[tokenId].name;
         string memory imageURI = noniInfos[tokenId].imageURI;
         uint256 elo = noniInfos[tokenId].elo;
-        string memory contentID = noniInfos[tokenId].contentID;
+        string memory modelID = noniInfos[tokenId].modelID;
+        string memory weightsID = noniInfos[tokenId].weightsID;
 
         bool forSale = noniInfos[tokenId].forSale;
         uint256 forSaleAsInt = boolToUInt256(forSale);
@@ -88,7 +94,8 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
                 '"name": "', name,'",',
                 '"imageURI": "data:image/svg+xml;base64,', imageURI,'",',
                 '"elo": "', elo.toString() ,'",',
-                '"contentID": "',contentID,'",',
+                '"modelID": "', modelID,'",',
+                '"weightsID": "', weightsID,'",',
                 '"forSale": "',forSaleAsInt.toString(),'",',
                 '"description": "Train your AI and battle against others!','",',
                 '"attributes": [{ "trait_type": "elo", "value": ',elo.toString(),' } ]'
@@ -104,10 +111,11 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
 
     }
 
-    function updateCID(uint256 tokenId, string memory newContentID) public {
+    function updateCID(uint256 tokenId, string memory modelID, string memory weightsID) public {
         require(ownerOf(tokenId) == msg.sender);
-        
-        noniInfos[tokenId].contentID = newContentID;
+
+        noniInfos[tokenId].modelID = modelID;
+        noniInfos[tokenId].weightsID = weightsID;
         emit NewCID (msg.sender);
 
     }
@@ -137,12 +145,12 @@ contract Noni is ERC721, ERC721URIStorage, ERC721Enumerable, Ownable {
         return noniInfos[tokenId].bid[tokenId];
     }
 
-    function transfer(address _from, address _to, uint256 tokenId, string memory newContentID) external {
+    function transfer(address _from, address _to, uint256 tokenId, string memory newModelCID, string memory newWeightsCID) external {
         // Delete all bids so that they are not there for the next owner
         delete noniInfos[tokenId].bid[tokenId];
         noniInfos[tokenId].forSale = false;
 
-        updateCID(tokenId, newContentID);
+        updateCID(tokenId, newModelCID, newWeightsCID);
         safeTransferFrom(_from, _to, tokenId);
     }
 
