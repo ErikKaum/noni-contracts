@@ -11,6 +11,7 @@ contract Game {
     struct GameComponent {
         uint256 gameId;
         address[2] players;
+        string[2] nonis;
         bool[2] verification;
         address turn;
         int8[9] game;
@@ -28,6 +29,7 @@ contract Game {
     }
 
     function initGame(address player1) public {
+        require(msg.sender != player1, 'Cannot challenge yourself');
         uint256 _gameId = gameCounter.current();
 
         // The one who initiaites the game gets to start, maybe not optimal but let's
@@ -48,14 +50,16 @@ contract Game {
         gamesByOther[player1].push(_gameId);
     }
 
-    function verifyGame(uint256 _gameId) public returns(bool succes) {
+    function verifyGame(uint256 _gameId, string memory noni) public returns(bool succes) {
 
         if (msg.sender == allGames[_gameId].players[0]) {
             allGames[_gameId].verification[0] = true;
+            allGames[_gameId].nonis[0] = noni; 
             return true;
         } 
         else if (msg.sender == allGames[_gameId].players[1]) {
             allGames[_gameId].verification[1] = true;
+            allGames[_gameId].nonis[1] = noni; 
             return true;
         }
         else {
