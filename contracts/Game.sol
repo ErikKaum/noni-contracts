@@ -11,7 +11,7 @@ contract Game {
     struct GameComponent {
         uint256 gameId;
         address[2] players;
-        string[2] nonis;
+        uint256[2] nonis;
         bool[2] verification;
         address turn;
         int8[9] game;
@@ -23,6 +23,7 @@ contract Game {
     mapping(address => uint256[]) public gamesByMe;
     
     event GameDone(uint256 _gameId, int8 winner);
+    event MoveDone(uint256 _gameId, int8[9] game);
 
     constructor() {
 
@@ -50,7 +51,7 @@ contract Game {
         gamesByOther[player1].push(_gameId);
     }
 
-    function verifyGame(uint256 _gameId, string memory noni) public returns(bool succes) {
+    function verifyGame(uint256 _gameId, uint256 noni) public returns(bool succes) {
 
         if (msg.sender == allGames[_gameId].players[0]) {
             allGames[_gameId].verification[0] = true;
@@ -85,6 +86,7 @@ contract Game {
             allGames[_gameId].turn = allGames[_gameId].players[0]; 
         }
 
+        emit MoveDone(_gameId, allGames[_gameId].game);
         if (terminated == true) {
             emit GameDone(_gameId, allGames[_gameId].state);
         }
