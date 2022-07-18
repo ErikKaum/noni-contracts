@@ -1,6 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 require('dotenv').config()
+require('hardhat-circom')
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -35,6 +36,17 @@ module.exports = {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
     apiKey: process.env.ETHER_SCAN_KEY
-  }
+  },
+
+  circom: {
+    inputBasePath: "./circuits",
+    ptau: "pot15_final.ptau",
+    circuits: [
+      {
+        name: "main",
+        protocol: "groth16"
+      }
+    ],
+  },
 
 };

@@ -2,11 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import { Verifier } from "./MainVerifier.sol";
 
 contract Game {
 
     using Counters for Counters.Counter;
     Counters.Counter private gameCounter;
+    Verifier private verifier;
 
     struct GameComponent {
         uint256 gameId;
@@ -26,7 +28,7 @@ contract Game {
     event MoveDone(uint256 _gameId, int8[9] game);
 
     constructor() {
-
+        verifier = new Verifier();
     }
 
     function initGame(address player1) public {
@@ -68,7 +70,14 @@ contract Game {
         }
     }
 
-    function makeMove(uint8 position, uint256 _gameId) public {
+    function makeMove(uint8 position, uint256 _gameId, uint[8] memory proof, uint[9] memory input) public {
+        
+        uint[2] memory a = [proof[0], proof[1]];
+        uint[2][2] memory b = [[proof[2], proof[3]], [proof[4], proof[5]]];
+        uint[2] memory c = [proof[6], proof[7]];
+
+        require(verifier.verifyProof(a, b, c, input), "invalid proof");
+
         require(allGames[_gameId].verification[0] == true && allGames[_gameId].verification[1] == true, "Game has not been verified by both players");
         require(allGames[_gameId].state == 3, "Game has not been initiated or is finnished");
         require(msg.sender == allGames[_gameId].turn, "It's not your turn!");

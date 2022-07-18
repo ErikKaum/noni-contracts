@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "circom:dev": "hardhat circom --deterministic --debug --verbose",
+    "circom:prod": "hardhat circom --verbose"
   },
   "author": "",
   "license": "ISC",
@@ -19,6 +21,8 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.6.0",
-    "dotenv": "^16.0.1"
+    "circomlib": "^2.0.5",
+    "dotenv": "^16.0.1",
+    "hardhat-circom": "^3.3.1"
   }
 }
